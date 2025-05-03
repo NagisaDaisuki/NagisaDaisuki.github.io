@@ -2,6 +2,7 @@
 date = '2025-05-03T23:06:34+08:00'
 draft = false
 title = 'Photo_injection'
+categories = ["成为人类"]
 +++
 > 插入图片看看
 

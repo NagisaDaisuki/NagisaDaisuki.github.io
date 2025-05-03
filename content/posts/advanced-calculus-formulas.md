@@ -3,6 +3,8 @@ date = '2025-05-03T21:50:38+08:00'
 draft = false
 title = 'Advanced Calculus Formulas'
 math = true
+categories = ["成神之路"]
+tags = ["微积分"]
 +++
 这是高等数学中的常用公式合集，使用 MathJax 渲染，适用于 Hugo 博客。
 
