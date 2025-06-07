@@ -6,6 +6,8 @@ categories = ["编程相关"]
 tags = ["shell"]
 +++
 
+# Linux文件、目录与磁盘格式
+
 ## 用户与用户组
 `useradd`、`groupadd`、`chown`、`chgrp`、`chmod`、`usermod`、`userdel`、`groupdel`
 ### 🧑‍💻 一、useradd：添加用户
@@ -60,7 +62,7 @@ sudo chown -R bob: /var/www/ # 递归更改整个目录
 sudo chgrp [选项] 组 文件
 ~~~
 示例：
-~~~cmd
+~~~
 sudo chgrp developers file.txt
 sudo chgrp -R staff /opt/shared # 递归更改整个目录
 ~~~
@@ -201,6 +203,7 @@ sudo chmod 770 /data/project
   - `w`：修改目录中的内容；
   - `x`：访问目录。
 
+---------------
 ## 目录与路径
 ~~~cmd
 .           代表此层目录。
@@ -342,6 +345,7 @@ touch -t 202506051111 bashrc
 ~~~
 > ⚠修改的是mtime和atime
 
+---------------
 ### 📖 二、查看文件内容类
 **🔸cat：连接并显示文件内容**
 ~~~cmd
@@ -419,6 +423,7 @@ od -t oCc /etc/issue
 echo password | od -t oCc
 ~~~
 > 其实不用带`-t`也可以
+---------------
 
 ### 🔒 三、权限与属性管理
 **🔸chattr：改变文件属性（适用于 ext 和部分文件系统）**
@@ -446,6 +451,7 @@ umask / umask -S/s和-p都是显示隐藏的默认创建文件权限码
 umask 022 设置创建文件时的文件权限
 ~~~
 
+---------------
 ### 🧩 四、文件类型与状态
 **🔸file：识别文件类型**
 ~~~cmd
@@ -455,6 +461,9 @@ file /bin/ls
 ~~~cmd
 stat filename
 ~~~
+
+---------------
+
 ### 🔎 五、文件查找与定位
 **🔸which：查命令路径（依赖 $PATH）**
 ~~~cmd
@@ -499,3 +508,515 @@ locate passwd
 2. **与使用者或用户组有关的参数：`-uid n`,`-gid n`,`-user name`,`-group name`,`-nouser`,`-nogroup`**
 
 范例三：查找/home下属于Nagisa的文件
+
+`find /home -user Nagisa`
+
+范例四：查找系统中不属于任何人的文件
+
+`find / -nouser`
+
+1. **与文件权限及名称有关的参数：`-name filename`,`-size [+-]SIZE`(查找比SIZE还要大(+)的或小(-)的文件,size规格为`c`Bytes和`k`KBytes),`-type TYPE`;`-perm -mode / /mode`;**
+范例五：找出文件名为passwd的文件
+
+`find / -name passwd`
+
+范例六：找出包含passwd关键字的文件
+
+`find / -name "*passwd*"`
+
+范例七：找出在`/run`目录下，文件类型为socket的文件名有哪些？
+
+`find /run -type s`
+
+范例八：查找文件当中含有SGID、SUID、SBIT属性的文件
+`find / -perm /7000`
+
+> 所谓的7000就是 ``---s--s--t``,那么只要含有s或t的就列出，所以当然要使用`/7000`
+>> 使用`-7000`需要同时含有这三个权限
+>>> -perm 亦可用于普通权限文件查找<br>
+>>  `find /usr/bin -perm 755`
+
+常用例：
+~~~cmd
+find /usr/bin /usr/sbin -perm /6000 # 无SBIT权限
+
+inshell: $(find "$WALLPAPER_DIR" -type f \( -iname "*.jpg" -o -iname "*.png" -o -iname "*.jpeg" -o \) | shuf -n 1) 
+# 随机抽取指定目录下的一张指定格式的图片
+
+find . -type f \( -name "*.txt" -o -name "*.md" \) ! -name "README.md"
+# 查找当前目录下，**文件类型是普通文件**，扩展名为.txt 或 .md 但不包括 README.md的文件
+
+find . -type f ! -name "*.bak"
+# 排除以.bak结尾的文件
+
+find . -name "*.tmp" -delete
+# 删除文件 (-delete 一定要配合 -type f 使用防止误删文件)
+
+find . -name "*.log" -exec rm {} \; # 删除 .log 文件
+find . -type f -exec chmod 644 {} \; # 批量修改权限
+find . -name "*.txt" -exec wc -l {} + # +可以批量处理 统计所有txt行数
+
+find . -name "*.log" | xargs rm
+# 搭配xargs 
+
+find . -type f -empty # 空文件
+find . -type d -empty # 空目录
+
+find . -name "*.mp3" -exec mv {} /target/dir/ \;
+find . -name ".jpg" -exec cp {} /backup/ \;
+# 查找并移动/复制文件
+
+find . -maxdepth 1 -name "*.sh" # 当前目录下查找
+find . -mindepth 2 # 忽略前几层目录
+~~~
+
+
+| 场景         | 与 (AND)   | 或 (OR) | 非 (NOT)      |    |     |
+| ---------- | --------- | ------ | ------------ | -- | --- |
+| Shell 命令行  | `&&`      |  `\|\|`    |    `!` |
+| `find` 命令中 | `-a`（可省略） | `-o`   | `!` 或 `-not` |    |     |
+
+4.**额外可以进行的操作：`-exec command`(command为其他命令，-exec后面再接额外命令来处理查找到的结果),`-print`(将结果打印到屏幕上，默认操作)**
+
+范例九：将上个范例找到的文件使用ls -l列出来
+
+`find /usr/bin /usr/sbin -perm /7000 -exec ls -l {} \;`
+> `ls -l`就是额外的command，命令不支持命令别名
+>> 所以只能用<ins>`ls -l`</ins>不可以使用<ins>`ll`</ins>
+
+范例十：找出系统中大于1MB的文件
+
+`find / -size +1M`
+
+范例十一：找出系统中小于1KB的文件
+
+`find / -size -1k`
+
+✅ 总结（速查）
+| 用法   | 示例                      |
+| ---- | ----------------------- |
+| 按名查  | `-name` / `-iname`      |
+| 按类型  | `-type f` / `-type d`   |
+| 按时间  | `-mtime -n` / `-newer`  |
+| 按大小  | `-size +100M`           |
+| 空文件  | `-empty`                |
+| 权限查  | `-perm 755`             |
+| 排除条件 | `! -name`               |
+| 删除   | `-delete`               |
+| 执行命令 | `-exec` 或配合 `xargs`     |
+| 限制深度 | `-maxdepth`、`-mindepth` |
+| 跳过目录 | `-prune`                |
+
+### 💨 Extra、文件特殊权限：SUID、SGID、SBIT
+~~~cmd
+chmod u+s # SUID设置
+chmod g+s # SGID设置
+chmod +t  # SBIT设置
+~~~
+- <font color="#8BDB67">文件具有`SUID`的特殊权限时，代表当用户执行此二进制程序时，在执行过程中用户会暂时具有程序拥有者的权限</font>
+- <font color="#39DBB5">目录具有`SGID`的特殊权限时，代表用户在这个目录下面新建的文件的用户组都会与该目录的组名相同</font>
+- <font color="#82DBA8">目录具有`SBIT`的特殊权限时，代表在该目录下用户建立的文件只有自己与root能够删除</font>
+
+---------------
+
+## 磁盘与文件系统
+> MBR: Master Boot Record<br>
+> GPT: GUID Partition Table
+### 一、磁盘分区 (Partitioning)
+
+#### 1. 查看磁盘信息
+* **`lsblk`**: 列出所有块设备及其分区信息，包括设备名称、大小、挂载点、文件系统类型等。这是最常用且直观的命令。
+    ```bash
+    lsblk
+    ```
+* **`fdisk -l`**: 列出所有磁盘的分区表信息。
+    ```bash
+    sudo fdisk -l
+    ```
+* **`parted -l`**: 另一个查看分区表的工具，对于 GPT 分区表支持更好。
+    ```bash
+    sudo parted -l
+    ```
+
+#### 2. 分区工具
+
+* **`fdisk` (MBR 和 GPT):** 适用于传统的 MBR (Master Boot Record) 分区表，也支持 GPT (GUID Partition Table) 分区表。它是交互式的。
+    ```bash
+    sudo fdisk /dev/sdX  # 替换 /dev/sdX 为你的磁盘设备名，例如 /dev/sdb
+    ```
+    进入 `fdisk` 后，可以使用以下常用命令：
+    * `m`: 显示帮助信息。
+    * `p`: 打印当前磁盘的分区表。
+    * `n`: 创建新分区。
+    * `d`: 删除分区。
+    * `w`: 将更改写入磁盘并退出。
+    * `q`: 不保存更改并退出。
+
+* **`parted` (MBR 和 GPT):** 功能更强大，尤其在处理大容量磁盘和 GPT 分区时更为灵活。可以交互式使用，也可以通过命令行直接操作。
+    ```bash
+    sudo parted /dev/sdX  # 替换 /dev/sdX 为你的磁盘设备名
+    ```
+    进入 `parted` 后，可以使用以下常用命令：
+    * `print`: 打印分区表。
+    * `mklabel gpt` 或 `mklabel msdos`: 创建新的分区表类型 (GPT 或 MBR)。
+    * `mkpart primary ext4 0% 100%`: 创建一个主分区，文件系统类型为 ext4，从磁盘的0%到100%。你可以根据需要调整大小和文件系统类型。
+    * `resizepart`: 调整分区大小。
+    * `rm`: 删除分区。
+    * `quit`: 退出。
+
+---
+
+### 二、文件系统格式化 (Formatting File Systems)
+
+创建分区后，需要对其进行格式化以创建文件系统，才能存储数据。
+
+* **`mkfs` 系列命令：** `mkfs` 是一个通用命令，后面可以跟不同的文件系统类型。
+    * **Ext4 (Linux 常用):**
+        ```bash
+        sudo mkfs.ext4 /dev/sdXY  # 替换 /dev/sdXY 为你的分区名，例如 /dev/sdb1
+        ```
+        或者
+        ```bash
+        sudo mkfs -t ext4 /dev/sdXY
+        ```
+    * **XFS:**
+        ```bash
+        sudo mkfs.xfs /dev/sdXY
+        ```
+    * **FAT32 (兼容 Windows):**
+        ```bash
+        sudo mkfs.vfat /dev/sdXY  # 或者 mkfs.fat -F 32 /dev/sdXY
+        ```
+    * **NTFS (兼容 Windows):**
+        ```bash
+        sudo mkfs.ntfs /dev/sdXY
+        ```
+    * **Btrfs:**
+        ```bash
+        sudo mkfs.btrfs /dev/sdXY
+        ```
+
+---
+
+### 三、分区分卷 (Logical Volume Management - LVM)
+
+LVM 允许你将多个物理磁盘或分区组合成一个或多个逻辑卷，从而提供更大的灵活性，例如在线调整大小、创建快照等。
+
+#### LVM 基本概念
+
+* **PV (Physical Volume - 物理卷):** 物理磁盘或分区，LVM 的最基本单元。
+* **VG (Volume Group - 卷组):** 一个或多个 PV 的集合。
+* **LV (Logical Volume - 逻辑卷):** 在 VG 上创建的虚拟分区，可以像普通分区一样格式化和挂载。
+
+#### LVM 常用命令
+
+* **创建 PV:**
+    ```bash
+    sudo pvcreate /dev/sdXY  # 将分区标记为物理卷
+    ```
+* **查看 PV:**
+    ```bash
+    sudo pvs
+    sudo pvdisplay
+    ```
+* **创建 VG:**
+    ```bash
+    sudo vgcreate my_vg /dev/sdb1 /dev/sdc1  # 创建名为 my_vg 的卷组，包含 sdb1 和 sdc1
+    ```
+* **查看 VG:**
+    ```bash
+    sudo vgs
+    sudo vgdisplay
+    ```
+* **从 VG 中扩展/移除 PV:**
+    ```bash
+    sudo vgextend my_vg /dev/sdd1  # 将 sdd1 添加到 my_vg
+    sudo vgreduce my_vg /dev/sdd1  # 从 my_vg 移除 sdd1 (需确保上面没有 LV)
+    ```
+* **创建 LV:**
+    ```bash
+    sudo lvcreate -L 10G -n my_lv my_vg  # 在 my_vg 中创建名为 my_lv 的 10GB 逻辑卷
+    sudo lvcreate -l 100%FREE -n my_lv my_vg # 使用 VG 中所有可用空间创建 LV
+    ```
+* **查看 LV:**
+    ```bash
+    sudo lvs
+    sudo lvdisplay
+    ```
+* **调整 LV 大小 (扩展/收缩):**
+    ```bash
+    sudo lvextend -L +5G /dev/my_vg/my_lv  # 将 my_lv 扩展 5GB
+    sudo lvreduce -L -2G /dev/my_vg/my_lv  # 将 my_lv 缩小 2GB (有数据丢失风险，需先卸载和检查文件系统)
+    ```
+    * **注意：** 扩展逻辑卷后，需要同时扩展文件系统才能使用新增的空间。
+        * Ext4: `sudo resize2fs /dev/my_vg/my_lv`
+        * XFS: `sudo xfs_growfs /dev/my_vg/my_lv` (通常不需要卸载)
+* **删除 LV:**
+    ```bash
+    sudo lvremove /dev/my_vg/my_lv  # 删除逻辑卷
+    ```
+* **删除 VG:**
+    ```bash
+    sudo vgremove my_vg  # 删除卷组 (需确保卷组中没有 LV)
+    ```
+* **删除 PV:**
+    ```bash
+    sudo pvremove /dev/sdXY  # 删除物理卷 (需确保物理卷没有被任何 VG 使用)
+    ```
+> Btrfs分卷查看Archlinux系统安装-->[Why Btrfs](https://arch.icekylin.online/guide/rookie/basic-install-detail.html)
+---
+
+
+### 四、分区挂载 (Mounting)
+
+将格式化后的分区或逻辑卷连接到文件系统树中的一个目录，使其可以被访问。
+
+#### 1. 创建挂载点
+
+* 挂载点是一个普通的空目录。
+    ```bash
+    sudo mkdir /mnt/mydata  # 创建一个名为 mydata 的挂载点
+    ```
+
+#### 2. 临时挂载
+
+* **基本挂载：**
+    ```bash
+    sudo mount /dev/sdXY /mnt/mydata  # 挂载分区 /dev/sdXY 到 /mnt/mydata
+    ```
+* **指定文件系统类型：** (通常不需要，`mount` 命令可以自动识别)
+    ```bash
+    sudo mount -t ext4 /dev/sdXY /mnt/mydata
+    ```
+* **只读挂载：**
+    ```bash
+    sudo mount -o ro /dev/sdXY /mnt/mydata
+    ```
+* **重新挂载 (改变挂载选项)：**
+    ```bash
+    sudo mount -o remount,rw /mnt/mydata  # 将已挂载的 /mnt/mydata 重新挂载为读写模式
+    ```
+* **查看已挂载的文件系统：**
+    ```bash
+    mount          # 列出所有已挂载的文件系统
+    df -h          # 以人类可读的方式显示磁盘空间使用情况，包括挂载点
+    lsblk -f       # 显示块设备的文件系统信息和挂载点
+    ```
+
+#### 3. 卸载分区
+
+* 在卸载之前，确保没有程序正在使用该挂载点下的文件。
+    ```bash
+    sudo umount /mnt/mydata  # 卸载 /mnt/mydata 目录
+    sudo umount /dev/sdXY    # 卸载 /dev/sdXY 分区
+    ```
+* 如果无法卸载（“device is busy”），可以使用 `lsof` 或 `fuser` 命令查找占用进程：
+    ```bash
+    sudo lsof /mnt/mydata
+    sudo fuser -km /mnt/mydata  # 强制杀死占用进程并卸载
+    ```
+
+#### 4. 永久挂载 (`/etc/fstab`)
+
+* 为了在系统启动时自动挂载分区，需要编辑 `/etc/fstab` 文件。
+* **推荐使用 UUID (Universally Unique Identifier) 来标识分区，因为设备名（如 `/dev/sdb1`）可能会在重启后改变。**
+    * 查找分区的 UUID：
+        ```bash
+        sudo blkid /dev/sdXY
+        ```
+    * 编辑 `/etc/fstab` 文件：
+        ```bash
+        sudo nano /etc/fstab  # 或者使用 vi、vim 等编辑器
+        ```
+    * 在文件末尾添加一行，格式如下：
+        ```
+        UUID=<你的UUID>  /mnt/mydata  ext4  defaults  0  2
+        ```
+        * **`<你的UUID>`:** 替换为你的分区的实际 UUID。
+        * `/mnt/mydata`: 挂载点。
+        * `ext4`: 文件系统类型。
+        * `defaults`: 常用挂载选项 (rw, suid, dev, exec, auto, nouser, async)。
+        * `0`: dump 选项，通常为 0 (不备份)。
+        * `2`: fsck 检查顺序，根文件系统为 1，其他为 2，不检查为 0。
+* **测试 `/etc/fstab` 配置：**
+    ```bash
+    sudo mount -a  # 尝试挂载所有在 /etc/fstab 中列出的但尚未挂载的文件系统
+    ```
+    如果没有任何错误输出，说明配置正确。如果有错误，请检查 `/etc/fstab` 文件。
+
+---------------
+
+## 文件与文件系统的压缩
+<ins>Linux文件压缩技术的核心原理主要是通过消除数据冗余来实现的，通常采用无损压缩算法。简单来说，就是想办法用更少的位（bits）来表示相同的信息。</ins>
+
+## 核心原理
+
+1.  ### **数据冗余的消除**
+    文件中的数据往往存在大量的重复和可预测的模式。压缩算法会识别这些“冗余”并将其替换为更短的表示。
+
+    * **重复数据查找和替换：** 这是最直观的方法。如果文件中有大量重复的字符序列，例如“AAAAA”，压缩算法会用一个更短的编码来表示“5个A”，而不是重复写5次“A”。
+    * **字典编码（如LZ77/LZ78）：**
+        * **LZ77** 算法（Lempel-Ziv 77）通过在文件已处理的数据中查找与当前数据流的匹配项。如果找到一个匹配，它就用一个指向匹配位置和匹配长度的“指针”来替换重复数据。这就像建立了一个临时字典，引用已出现过的短语。
+        * **LZ78** 算法（Lempel-Ziv 78）则会构建一个显式的字典。它将文件中出现的新的字符串添加到字典中，并用字典中的索引来替换这些字符串。当遇到重复的字符串时，直接用字典索引表示。
+    * **熵编码（如霍夫曼编码、算术编码）：** 这种方法基于数据的统计特性。
+        * **频率分析：** 某些字符或模式在文件中出现的频率更高。
+        * **变长编码：** 熵编码利用这种频率差异，为出现频率高的字符分配更短的编码（例如，用1位表示最常见的字符），为出现频率低的字符分配更长的编码。这样一来，文件的平均编码长度就缩短了，从而实现压缩。**霍夫曼编码**就是典型的例子，它通过构建霍夫曼树来生成最优的变长编码。
+
+2.  ### **无损压缩 vs. 有损压缩**
+    * **无损压缩（Lossless Compression）：** Linux文件压缩主要采用的方式。这意味着**在压缩和解压缩后，原始数据可以完全、精确地恢复，没有任何信息损失**。这对于文本文件、程序代码等至关重要，因为任何一点数据丢失都可能导致文件损坏或程序无法运行。`gzip`、`bzip2`、`xz` 等 Linux 命令都属于无损压缩。
+    * **有损压缩（Lossy Compression）：** 这种压缩方式会在压缩过程中**舍弃一部分信息以达到更高的压缩比**。解压缩后的数据与原始数据会有所不同，但这种差异通常在特定应用场景下（如图像、音频、视频）是人眼或人耳难以察觉或可以接受的（例如 JPEG 图片和 MP3 音频）。文件压缩通常不使用有损压缩，因为它会改变文件内容。
+
+---
+
+## 常见的Linux压缩工具及其原理简述
+
+| 工具/后缀 | 核心算法                                     | 特点                                                                   |
+| :-------- | :------------------------------------------- | :--------------------------------------------------------------------- |
+| **gzip (.gz)** | **Deflate** (LZ77 + 霍夫曼编码)             | **速度快**，压缩比适中，应用最广泛。                                 |
+| **bzip2 (.bz2)** | **BWT (Burrows-Wheeler Transform)** + **MTF** + 霍夫曼/算术编码 | **压缩比通常比gzip高**，但压缩和解压缩**速度相对较慢**，更消耗CPU。 |
+| **xz (.xz)** | **LZMA (Lempel-Ziv-Markov chain Algorithm)** | **压缩比最高**，尤其适合大型文件。但压缩速度通常**最慢**，也更消耗内存。 |
+| **zip (.zip)** | 通常是 **Deflate** | **跨平台**压缩格式，可打包多个文件和目录。                            |
+
+**注意：** `tar` 命令 (`.tar` 文件) 本身不是压缩工具，它是一个“打包”工具，用于将多个文件和目录合并成一个单一的归档文件。通常会与 `gzip` (`.tar.gz` 或 `.tgz`)、`bzip2` (`.tar.bz2` 或 `.tbz`) 或 `xz` (`.tar.xz` 或 `.txz`) 结合使用，先打包再压缩。
+
+---
+
+### gzip、bzip2、xz、tar 命令详解
+
+### 1. `gzip` 命令
+
+`gzip`（GNU zip）是 Linux 中最常用的压缩工具之一，采用 **Deflate** 算法进行无损压缩。
+
+* **功能：** 压缩或解压缩文件。默认会生成 `.gz` 后缀的压缩文件并删除原文件。
+* **特点：** 压缩速度快，压缩比适中。
+
+**常用选项：**
+
+* `-d`, `--decompress`：解压缩。等同于 `gunzip`。
+* `-f`, `--force`：强制执行，覆盖同名文件。
+* `-k`, `--keep`：保留原始文件。
+* `-v`, `--verbose`：显示详细信息。
+* `-c`, `--stdout`：输出到标准输出，不创建文件。
+* `-num` (e.g., `-1` 到 `-9`)：设置压缩级别，`-1` 最快，`-9` 最佳（默认 `-6`）。
+
+**使用示例：**
+
+```bash
+gzip myfile.txt               # 压缩文件，生成 myfile.txt.gz
+gzip -k myfile.txt            # 压缩文件并保留原文件
+gzip -d myfile.txt.gz         # 解压缩文件
+gzip -l myfile.txt.gz         # 查看压缩信息
+gunzip myfile.txt.gz          # 不常用 多用 gzip -d
+gzip -v myfile.txt            # 显示压缩过程
+zcat myfile.txt.gz            # zcat和gzip -l一样可以查看压缩信息
+gzip -9 -c myfile.txt > myfile.txt.gz # 最佳压缩比压缩并保留原本文件
+```
+
+### 2. `bzip2`命令
+`bzip2`提供比`gzip`更高的**压缩比**，但压缩和解压缩速度相对较慢，且占用更多内存。
+* **功能：** 压缩或解压缩文件。默认会生成 .bz2 后缀的压缩文件并删除原文件。
+* **特点：**  压缩比高，速度慢，资源占用相对较高。
+
+**常用选项：**
+
+* `-d`, --decompress：解压缩。等同于 bunzip2。
+* `-f`, --force：强制执行。
+* `-k`, --keep：保留原始文件。
+* `-v`, --verbose：显示详细信息。
+* `-c`, --stdout：输出到标准输出。
+* `-num`，(e.g. -1 到 -9)：设置压缩级别，默认 -9。
+
+**使用示例：**
+
+~~~bash
+bzip2 mydocument.txt          # 压缩文件，生成 mydocument.txt.bz2
+bzip2 -k mydocument.txt       # 压缩文件并保留原文件
+bzip2 -d mydocument.txt.bz2   # 解压缩文件
+bzcat mydocument.txt.bz2      #  查看压缩文件内容（不解压）
+bzip2 -c -9 mydocument.txt > mydocument.txt.bz2 # 最佳压缩比压缩并保留原文件
+~~~
+
+### 3. `xz`命令
+`xz`
+* **功能**： 压缩或解压缩文件。默认会生成 `.xz` 后缀的压缩文件并删除原文件。
+* **特点**： 压缩比最高，速度最慢，压缩时内存消耗最大。
+
+**常用选项：**
+* `-d`, `--decompress`：解压缩。等同于 `unxz`。
+* `-f`, `--force`：强制执行。
+* `-k`, `--keep`：保留原始文件。
+* `-c`, `--stdout`：输出到标准输出。
+* `-v`, `--verbose`：显示详细信息。
+* `-num`, (e.g. -0 到 -9)：设置压缩级别，默认 -6。
+* `-l`, `--list`：列出压缩文件信息。
+
+**使用示例：**
+~~~bash
+xz mydata.log         # 压缩文件，生成 mydata.log.xz
+xz -k mydata.log      # 压缩文件并保留原文件
+xz -d mydata.log.xz   # 解压缩文件
+xzcat mydata.log.xz   # 查看压缩文件内容 (不解压)
+xz -l mydata.log.xz   # 列出压缩文件信息 
+~~~
+
+### 4. `tar`命令
+`tar`（Tape Archive）是一个归档（打包）工具，本身不进行压缩。它将多个文件和目录组合成一个单一的归档文件（“tarball”），常与 ``gzip``、`bzip2`、`xz` 结合使用。
+
+* **功能**： 创建归档文件、从归档中提取文件、列出归档内容。
+* **特点**： 仅打包，可与压缩工具结合。
+
+**常用选项：**
+* `-c`, `--create`：创建归档。
+* `-x`, `--extract`：提取（解包）文件。
+* `-t`, `--list`：列出归档内容。
+* `-f <archive-file>`：指定归档文件名。
+* `-v`, `--verbose`：显示详细信息。
+* `-z`, `--gzip`：使用 gzip 压缩/解压缩。
+* `-j`, `--bzip2`：使用 bzip2 压缩/解压缩。
+* `-J`, `--xz`：使用 xz 压缩/解压缩。
+* `-C <directory>`：提取时，将文件更改到指定目录。
+* `-p`, 保留备份数据的原本权限与属性，常用于备份(-c)重要的配置文件。
+* `-P`, 保留绝对路径，亦即允许备份数据中含有根目录存在之意。
+* `--exclude=FILE`, 在压缩的过程中不要将FILE打包。
+
+**常见组合和使用示例：**
+* `.tar.gz`或 `.tgz`：`tar + gzip`
+* `.tar.bz2`或`.tbz`：`tar + bzip2`
+* `.tar.xz`或 `.txz`：`tar + xz`
+
+**使用示例：**
+~~~bash
+# 打包并用gzip 压缩
+tar -czvf myarchive.tar.gz /path/to/my/directory file1.txt
+
+# 解压缩并解包 .tar.gz 文件
+tar -xzvf myarchive.tar.gz
+
+# 解压缩 .tar.gz 文件到指定目录
+tar -xzvf myarchive.tar.gz
+
+# 打包并用 bzip2 压缩
+tar -cjvf finalarchive.tar.bz2 /path/to/final/data
+
+# 打包并用 xz 压缩
+tar -cJvf finalarchive.tar.xz /path/to/final/data
+
+# 简建议-f单独写一个选项 (比较不会忘记)
+# 查询
+tar -jtv -f filename.tar.bz2
+
+# 备份/etc文件夹
+time tar -czvp -f /root/etc.tar.gz /etc # 多了time会显示程序运行的时间
+time tar -cjvp -f /root/etc.tar.bz2 /etc
+time tar -cJvp -f /root/etc.tar.xz /etc
+~~~
+### 打包命令
+
+
+###
+-----
+
+# Shell 与 ShellScripts
+## Vi、Vim与程序编辑器
+
+
