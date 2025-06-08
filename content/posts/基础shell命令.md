@@ -829,7 +829,7 @@ LVM 允许你将多个物理磁盘或分区组合成一个或多个逻辑卷，�
         sudo nano /etc/fstab  # 或者使用 vi、vim 等编辑器
         ```
     * 在文件末尾添加一行，格式如下：
-        ```
+        ```bash
         UUID=<你的UUID>  /mnt/mydata  ext4  defaults  0  2
         ```
         * **`<你的UUID>`:** 替换为你的分区的实际 UUID。
@@ -1009,10 +1009,142 @@ tar -jtv -f filename.tar.bz2
 time tar -czvp -f /root/etc.tar.gz /etc # 多了time会显示程序运行的时间
 time tar -cjvp -f /root/etc.tar.bz2 /etc
 time tar -cJvp -f /root/etc.tar.xz /etc
+
+# 仅解开单一文件的方法
+# 先找到我们要找的文件名，假设解开 shadow文件
+tar -jtv -f /root/etc.tar.bz2 | grep 'shadow'
+tar -jxv -f 打包文件.tar.bz2  待解开文件名
+tar -jxv -f  /root/etc.tar.bz2 etc/shadow 
+
+# 打包某目录但不含该目录下的某些文件的做法
+tar -jcv -f /root/system.tar.bz2 --exclude=/root/etc* \
+--exclude=/root/system.tar.bz2 /etc /root
+
+# 仅备份比某个时刻还要新的文件
+find /etc -newer /etc/shadow
+# 找到一个指定的日期
+tar -jcv -f /root/etc.newer.then.passwd.tar.bz2 \
+--newer-mtime="2025/06/06" /etc/*
+
+# 标准输入输出流重定向和管道符结合 
+# 将/etc整个目录一边打包一边在/tmp解开
+cd /tmp
+tar -czvf - /etc | tar -xvf -
+# 这个操作有点像cp -r /etc /tmp 
 ~~~
-### 打包命令
+> 如果想要两行输入时，最后面加上反斜杠`\`并立刻按下[Enter]就能够到第二行继续输入了。
 
+-------- 
+## 光盘写入工具
+###  `mkisofs`、`cdrecord`
 
+### 1. `mkisofs` 命令
+
+`mkisofs` (或在新版系统上通常是 `genisoimage`) 用于从一个目录树创建 ISO 9660 文件系统映像文件。这种映像文件常用于制作 CD/DVD/BD 镜像，以便刻录或在虚拟机中使用。
+
+* **功能：** 将文件和目录打包成 ISO 格式的镜像文件。
+* **适用场景：** 制作可引导光盘镜像、数据光盘镜像、虚拟机安装盘等。
+
+**基本语法：**
+
+```bash
+mkisofs [选项] -o <输出文件名.iso> <源目录/文件>
+```
+**常用选项：**
+
+* `-o <输出文件名.iso>`：指定输出的 ISO 镜像文件名。这是最重要的选项，如果没有指定，输出会发送到标准输出。
+* `-r, --rock-ridge`：生成 Rock Ridge 扩展，保留 UNIX 文件权限、所有者、组、符号链接、长文件名等 POSIX 属性。强烈推荐使用，以便在 Linux/Unix 系统上正确读取。
+* `-J, --joliet`：生成 Joliet 扩展，支持 Windows 上的长文件名和 Unicode 字符。如果你希望在 Windows 和 Linux 上都能良好兼容，通常会同时使用 -r 和 -J。
+* `-V <卷标>, --volid <卷标>`：设置 ISO 镜像的卷标 (Volume ID)，即光盘插入系统后显示的名称。
+* `-b <引导文件>, --boot-image <引导文件>`：指定用于创建可引导光盘的引导镜像文件（通常是 isolinux/isolinux.bin 或 grub/efi.img）。需要配合其他选项使用，如 -c。
+* `-c <引导目录/文件>, --boot-info-table <引导目录/文件>`：指定引导信息目录或文件，通常与 -b 结合使用，用于生成引导目录。
+* `-udf`：生成 UDF 文件系统，通常用于 DVD 和蓝光。
+* `-m <模式>, --exclude <模式>`：排除与指定模式匹配的文件。
+* `-x <目录>, --exclude-dir <目录>`：排除指定的目录。
+
+**使用示例：**
+1. 创建最基本的 ISO 镜像：
+~~~bash
+mkdir my_iso_content
+echo "Hello world" > my_iso_content/hello.txt
+mkdir my_iso_content/subdir
+echo "Another file" > my_iso_content/subdir/another.txt
+
+mkisofs -o mydata.iso my_iso_content
+~~~
+2. 创建 Linux/Windows 兼容的 ISO 镜像 (常用)：
+~~~bash
+mkisofs -o my_cross_platform.iso -r -J -V "MyDataDisk" my_iso_content
+~~~
+`-r` (Rock Ridge) 用于 Linux/Unix 兼容，`-J`(Joliet) 用于 Windows 兼容，`-V` 设置卷标。
+
+### 2. `cdrecord` 命令
+`cdrecord` (现在通常是 `wodim` 或 `cdrskin` 的符号链接) 是一个用于刻录 CD、DVD、蓝光盘的命令行工具。它通常与 `mkisofs` 生成的 ISO 镜像配合使用。
+- **功能**： 将 ISO 镜像或其他数据刻录到光盘上。
+- **适用场景**： 制作物理光盘、备份数据到光盘、刻录音乐 CD。
+
+**基本语法：**
+~~~bash
+cdrecord [选项] <要刻录的文件.iso>
+~~~
+**常用选项：**
+- `dev=<scsi_id>|/dev/<device>`：指定刻录设备。这是最重要的选项。
+  - `<scsi_id>` 格式通常是 bus,target,lun (例如 0,0,0)，可以通过 cdrecord --scanbus 命令查找。
+  - `/dev/<device>` 格式是你的光驱设备文件（例如 /dev/sr0 或 /dev/cdrom）。
+- `speed=<速度>`：设置刻录速度（例如 `speed=4`，`speed=8`，`speed=max`）。
+- `-v`, `--verbose`：显示详细信息，包括刻录进度。
+- `blank=<模式>`：擦除可擦写光盘（CD-RW/DVD-RW）。
+  - `fast`：快速擦除，只擦除介质的引导区。
+  - `all`：完全擦除，擦除整个介质。
+- `-dummy`：进行一次虚拟刻录（测试刻录），不实际写入数据。用于在真正刻录前检查设置。
+- `-eject`：刻录完成后弹出光盘。
+
+**使用示例：**
+1. **查找刻录设备：**
+~~~bash
+cdrecord --scanbus
+~~~
+2. **刻录 ISO 镜像到光盘**
+```bash
+sudo cdrecord dev=/dev/sr0 speed=8 -v my_data.iso
+```
+3. **擦除 CD-RW 光盘**
+```bash
+sudo cdrecord dev=/dev/sr0 blank=fast
+```
+4. **测试刻录 (虚拟刻录)：**
+```bash
+sudo cdrecord dev=/dev/sr0 -dummy my_data.iso
+```
+## 其他压缩与备份工具
+### `dd` 命令
+`dd` 命令 (dataset definition) 是一个功能强大的块级数据复制工具。它以字节为单位复制数据，因此可以用于复制整个硬盘、分区、创建镜像文件、制作启动盘等。
+
+- **功能**： 按块复制数据。
+- **适用场景**： 磁盘克隆、分区备份与恢复、制作可引导 USB 驱动器、创建交换文件、安全擦除数据。
+
+**基本语法：**
+```bash
+dd if=<输入文件> of=<输出文件> [选项]
+```
+**使用示例：**
+1. **克隆整个硬盘 (数据备份/迁移)：**
+```bash
+sudo dd if=/dev/sda of=/dev/sdb bs=4M status=progress
+```
+2. **备份分区到文件：**
+```bash
+sudo dd if=/dev/sda1 of=/path/to/backup/sda1_backup.img bs=4M status=progress
+```
+3. **制作可引导 USB 驱动器 (从 ISO 镜像)：**
+```bash
+sudo dd if=ubuntu-24.04-desktop-amd64.iso of=/dev/sdX bs=4M status=progress
+```
+4. **创建大文件（例如用于交换文件或测试文件）：**
+```bash
+dd if=/dev/zero of=my_large_flie.img bs=1M count=1024
+```
+> `dd` 是一个**非常强大的命令**，也被称为<font color="red"><ins>“数据毁灭者”</ins></font>。一个参数的错误就可能导致数据永久丢失。在使用 `dd` 时，请务必再三确认 `if` 和 `of` 参数。
 ###
 -----
 
