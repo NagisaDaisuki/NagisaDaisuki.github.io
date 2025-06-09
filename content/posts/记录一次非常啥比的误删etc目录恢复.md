@@ -5,7 +5,7 @@ title = '记录一次非常啥比的误删etc目录恢复'
 categories = ["成为人类"]
 tags = ["shell"]
 +++
-
+## 测试测试
 ## 我是Retard
 ### 删除/etc目录后如何使用LiveCD和已经备份的/etc目录恢复
 1. **准备一个 Linux Live CD/USB：**
