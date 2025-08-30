@@ -165,5 +165,5 @@ markup:
 # 自动更新文章修改时间
 # 启动lastmod
 
-frontmatter: 
-    lastmod: ["lastmod", ":git", "date", "publishDate"]
+#frontmatter: 
+#    lastmod: ["lastmod", ":git", "date", "publishDate"]
