@@ -117,11 +117,11 @@ params:
 
  # 设置网站的标签页的图标，即 favicon
   assets:
-      favicon: "favicon.png"
-      favicon16x16: "favicon.png"
-      favicon32x32: "favicon.png"
-      apple_touch_icon: "favicon.png"
-      safari_pinned_tab: "favicon.png"
+      favicon: "favicon.ico"
+      favicon16x16: "favicon.ico"
+      favicon32x32: "favicon.ico"
+      apple_touch_icon: "favicon.ico"
+      safari_pinned_tab: "favicon.ico"
       disableHLJS: true
 
   # 评论的设置
@@ -161,3 +161,9 @@ markup:
     # 这里设置 style 没用，得自己加 css
     # style: "github-dark"
     # style: monokai
+
+# 自动更新文章修改时间
+# 启动lastmod
+
+frontmatter: 
+    lastmod: ["lastmod", ":git", "date", "publishDate"]

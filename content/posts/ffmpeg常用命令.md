@@ -209,7 +209,7 @@ ffmpeg -i input.mp4 -threads 8 -c:v libx264 -preset fast output.mp4
 越“fast”，编码越快，但文件体积越大、画质压缩越弱
 ### 😎 3. FFmpeg纯音频合成黑场视频
 ~~~
-ffmpeg -i your_audioi.mp3 -f lavfi -i color=c=black:s=640x480:r=30 -c:v libx264 -pix_fmt yuv420p -c:a copy -shortest output_black_video.mp4
+ffmpeg -i your_audio.mp3 -f lavfi -i color=c=black:s=640x480:r=30 -c:v libx264 -pix_fmt yuv420p -c:a copy -shortest output_black_video.mp4
 ~~~
 - `-i your_audio.mp3`: 指定你的输入音频文件。替换 `your_audio.mp3` 为你的实际音频文件路径。
 - `-f lavfi`:　告诉 FFmpeg 使用 `lavfi` (libavfilter input) 虚拟设备。
