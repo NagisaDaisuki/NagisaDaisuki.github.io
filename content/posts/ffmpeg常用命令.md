@@ -1,5 +1,5 @@
 +++
-date = '2025-08-230T21:42:53+08:00'
+date = '2025-08-30T21:42:53+08:00'
 draft = false
 title = 'FFmpeg常用命令'
 categories = ["编程相关"]
