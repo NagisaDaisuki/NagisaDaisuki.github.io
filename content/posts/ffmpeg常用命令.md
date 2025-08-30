@@ -1,7 +1,7 @@
 +++
-date = '2025-05-04T02:42:53+08:00'
+date = '2025-08-230T21:42:53+08:00'
 draft = false
-title = 'Ffmpeg常用命令'
+title = 'FFmpeg常用命令'
 categories = ["编程相关"]
 tags = ["ffmpeg"]
 +++
@@ -64,7 +64,6 @@ ffmpeg -i input.mp4 -vn -acodec copy output.aac
 - `vn`: 不处理视频流（只提取音频）
 - `c:a aac`: 指定音频编码为 AAC（与 .aac 容器兼容）
 ## 2.转换为MP3
-~~~
 ~~~shell
 ffmpeg -i input.aac output.mp3
 ~~~
@@ -226,3 +225,50 @@ ffmpeg -i your_audio.mp3 -f lavfi -i color=c=black:s=640x480:r=30 -c:v libx264 -
 `-c:a copy`: 复制音频流，不重新编码。这样可以保持原始音频的音质和编码格式（例如，如果你的输入是 AAC，输出的 MP4 中音频也会是 AAC）。
 `-shortest`: 这个非常重要！它告诉 FFmpeg 输出的视频时长应与最短的输入流（在这里就是你的音频文件）的持续时间保持一致。如果没有这个，FFmpeg 会生成一个无限长的黑屏视频。
 `output_black_video.mp4`: 指定输出的 MP4 文件名。
+
+
+### ✨4.使用FFmpeg提取指定视频时间区域制作成GIF
+
+**基本命令(质量较低)**
+~~~shell
+ffmpeg -ss [开始时间] -to [结束时间] -i input.mp4 -vf "fps=10,scale=320:-1" output.git
+~~~
+
+- `ss [开始时间]`: 指定视频的开始时间。格式可以是`HH:MM:SS`(小时:分钟:秒)或(SS)秒。例如：`00:00:10` 表示从视频的第 10 秒开始，``5`` 表示从视频的第 5 秒开始。
+- `to [结束时间]`：指定视频的结束时间。格式与` -ss `相同。
+- `i input.mp4`：指定输入视频文件。请将` input.mp4 `替换为你的视频文件路径。
+- `-vf "fps=10,scale=320:-1"`是视频滤镜选项：
+  - `fps=10`：设置 GIF 的帧率（每秒帧数）为 10。较低的帧率可以减小 GIF 的文件大小。你可以根据需要调整此值。
+  - `scale=320:-1`：设置 GIF 的宽度为 320 像素，高度会自动根据原始视频的宽高比进行调整（-1 表示保持宽高比）。你可以调整宽度来控制 GIF 的尺寸和文件大小。
+  - `output.gif`：指定输出 GIF 文件的名称。
+
+**高质量 GIF（两步法 - 推荐）**
+
+1. **生成调色板 (palettegen)：** FFmpeg 会分析视频中的颜色，生成一个最优的 256 色调色板。GIF 格式限制为 256 种颜色，所以使用一个定制的调色板可以显著提高图像质量。
+2. **使用调色板生成 GIF (paletteuse)：** 使用上一步生成的调色板来渲染 GIF。
+
+**步骤 1: 生成调色板**
+~~~shell
+ffmpeg -ss [开始时间] -to [结束时间] -i input.mp4 -vf "fps=10,scale=320:-1:flags=lanczos,palettegen" palette.png
+~~~
+**与基本命令相比，新增和修改的参数：**
+- `flags=lanczos`：在缩放时使用 Lanczos 算法，通常能提供更好的缩放质量。
+- ``palettegen``：这是一个滤镜，用于生成调色板。
+- ``palette.png``：输出的调色板文件（临时文件）。
+**步骤 2: 使用调色板生成 GIF**
+~~~shell
+ffmpeg -ss [开始时间] -to [结束时间] -i input.mp4 -i palette.png -filter_complex "fps=10,scale=320:-1:flags=lanczos[x];[x]:[1:v]paletteuse" output.gif
+~~~
+**新增和修改的参数：**
+- `-i palette.png`：将上一步生成的调色板文件作为第二个输入。
+- `-filter_complex "fps=10,scale=320:-1:flags=lanczos[x];[x][1:v]paletteuse"`：这是一个复杂的滤镜链：
+  - `fps=10,scale=320:-1:flags=lanczos`：与第一步相同，对视频进行帧率和尺寸调整，并将结果命名为 [x]。
+  - `[x][1:v]`：将处理后的视频流 [x] 和第二个输入（`palette.png`，即 `[1:v]` 视频流）作为输入。
+  - `paletteuse`：使用调色板将视频转换为 GIF。
+
+**额外优化和注意事项**
+- **文件大小**： GIF 文件的主要影响因素是**帧率(flame)**、**分辨率(resolution)**和**持续时间(durations)**。降低帧率 (`fps`)、缩小尺寸 (`scale`) 和缩短持续时间可以显著减小文件大小。
+- **循环播放**：GIF 默认是无限循环的。如果你想控制循环次数，可以在输出文件前添加`` -loop ``参数。
+- **开始时间` -ss `的位置：**
+- 将 `-ss` 放在 `-i` 之前：这样 FFmpeg 会在读取输入文件之前先定位到指定时间，这通常更快，但可能会导致起始时间略微不准确（它会寻找最近的关键帧）。
+- 将 `-ss` 放在 `-i` 之后：这样 FFmpeg 会从视频开头开始解码，然后在指定时间点开始处理，通常更精确，但对于大型视频文件可能会比较慢。对于 GIF 提取，通常精确度更重要，所以放在 `-i` 之后可能更合适。
