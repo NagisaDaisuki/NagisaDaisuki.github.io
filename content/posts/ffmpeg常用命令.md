@@ -1,12 +1,12 @@
 +++
-date = '2025-08-30T21:42:53+08:00'
+date = '2025-09-02T15:32:01+08:00'
 draft = false
 title = 'FFmpeg常用命令'
 categories = ["编程相关"]
 tags = ["ffmpeg"]
 +++
 
-## ffmpeg 是音、视频处理的一个强大开源工具，它包含许多组件和扩展库，在视频网站和商业软件被大量应用。它还有一个命令行工具，在很多场景下直接使用ffmpeg命令行工具比桌面视频处理软件更简洁高效。
+## FFmpeg 是音、视频处理的一个强大开源工具，它包含许多组件和扩展库，在视频网站和商业软件被大量应用。它还有一个命令行工具，在很多场景下直接使用FFmpeg命令行工具比桌面视频处理软件更简洁高效。
 
 使用 `ffmpeg` 前，可先简单了解下视频处理的一些基本概念：
 
@@ -186,11 +186,122 @@ for %%f in (*.jfif) do ffmpeg -i "%%f" "%%~nf.png"
 ~~~
 ✅ 如果你直接在命令行中运行（不是 .bat 文件），要用 %f 而不是 %%f
 
-## 视频格式转换补充
+## 1. 图片转换选项
+
+### PNG(Portable Network Graphics) 可选的选项
+
+`-pix_fmt`：**控制像素格式**
+
+这个选项决定了输出 PNG 文件的颜色深度和通道数。它直接影响文件大小和颜色精度。
+- `rgba`: 这会创建一个带有 Alpha 通道（透明度）的真彩色 PNG 文件。如果你的输入图片包含透明度信息，这是最佳选择，因为它能完整保留透明度。
+- `rgb24`: 这会创建一个没有 Alpha 通道的真彩色 PNG 文件。文件会比 rgba 小，因为没有透明度数据。如果你不需要透明度，这是个好选择。
+- `gray`: 这会创建一个灰度 PNG 文件。文件最小，但会丢失所有颜色信息。
+- `graya`: 灰度文件，但包含一个 Alpha 通道。
+
+**示例**
+
+如果你想将一张 JPG 图片转换为带透明度的 PNG，你可以这样做：
+~~~shell
+ffmpeg -i input.jpg -pix_fmt rgba output.png
+~~~
+**注意:** 如果输入图片没有透明度，`rgba`格式会添加一个全不透明的Alpha通道
+
+滤镜(**`-vf`**)：**图像处理选项**
+
+在将图片保存为PNG之前，你可以使用各种视频滤镜来处理图像
+- `scale`: 调整图片大小
+  - `ffmpeg -i input.jpg -vf "scale=800:600" output.png`
+- `crop`: 裁剪图片
+  - `ffmpeg -i input.jpg -vf "crop=500:500:100:100" output.png`
+- `format`: 类似于`-pix_fmt`,但更灵活，允许你强制转换像素格式
+  - `ffmpeg -i input.jpg -vf "format=rgba" output.png`
+
+### JPEG(Joint Photographic Experts Group) 可选的选项
+
+`-q:v`或`-qscale:v`：**控制质量(常用)** 
+
+这是最常用的选项，用于直接控制 JPG 输出的质量。其值范围通常是 *2* 到 *31*。
+- `ffmpeg -i input.png -q:v 2 output.jpg`: `2`是最高质量，文件最大。
+- `ffmpeg -i input.png -q:v 31 output.jpg`: `31`是最低质量，文件最小。
+
+**建议：**
+- **高质量输出**：使用 `-q:v 2` 到 `-q:v 5`，这个范围能提供极好的画质，但文件较大。
+- **平衡质量与大小**：使用 `-q:v 6` 到 `-q:v 10`，这是一个很好的折衷方案。
+
+`-pix_fmt`：**像素格式**
+
+这个选项决定了输出JPG文件的颜色格式
+- `yuvj444p`: 提供了最好的颜色质量，是最高级别的色度采样(4:4:4)。文件最大。
+- `yuvj422p`: 提供了中等的颜色质量（4:2:2）。在大多数情况下画质和文件大小之间达到了很好的平衡。
+- `yuvj420p`: 提供了最低的颜色质量（4:2:0）。这是最常见的格式，文件最小，适用于网络传输。
+
+**示例：**
+
+以最高质量的像素格式输出 JPG。
+
+~~~shell
+ffmpeg -i input.png -pix_fmt yuvj444p -q:v 2 output.jpg
+~~~
+
+`-ss`和`-t`：**从视频中提取帧**
+
+如果你从视频中提取帧并保存为 JPG，可以使用这两个选项来指定时间范围。
+
+- `-ss`: 指定开始时间，格式为`hh:mm:ss.sss`。
+- `-t`: 指定持续时间。
+- `-frame:v`: 指定要提取的帧数。
+
+**示例：**
+
+从 `video.mp4` 的第 **5** 秒开始，提取 **10** 帧并保存为 `frame%02d.jpg`。
+
+~~~cmd
+ffmpeg -ss 5 -i video.mp4 -t 1 -frames:v 10 frame%02d.jpg
+~~~
+
+### WebP可选的选项
+WebP是一种为网络优化的新一代图片格式，支持有损和无损压缩，以及透明度。
+- `lossless 1`: 启用无损压缩模式。WebP的无损压缩通常比**PNG**更高效，文件更小。
+  - `ffmpeg -i input.png -lossless 1 output.webp`
+- ``-q:v`` 或 `-qscale:v`: 控制有损压缩的质量。值范围是 **0** 到 **100**，**100 是最高质量**。这与 JPEG 的质量选项类似，但范围相反。
+  - `ffmpeg -i input.jpg -q:v 80 output.webp`
+- `-compression_level`: 控制压缩速度与文件大小的平衡。值范围是 0 到 6，**6 是最慢、压缩率最高**。
+  - `ffmpeg -i input.png -compression_level 6 output.webp`
+
+WebP 格式的***独特之处***在于它能在一个文件中同时处理有损和无损压缩，并且透明度支持比 **JPEG** 更好。
+
+### AVIF可选的选项
+AVIF 是一种基于 AV1 视频编码的图片格式，旨在提供比 JPEG 和 WebP 更高的压缩效率。
+- `-crf`: 控制压缩质量。与 H.264 编码器类似，值越低，质量越高，文件越大。
+  - `ffmpeg -i input.jpg -c:v libsvtav1 -crf 20 output.avif`
+- `-tile-columns` 和 `-tile-rows`: 决定图像如何被分割成瓦片进行并行编码，可以提高编码速度。
+
+
+### TIFF可选的选项
+TIFF是一种灵活且兼容性强的无损(lossless)格式，常用于印刷和专业图像编辑。
+- `-compression_algo`: 控制压缩算法。TIFF 支持多种无损压缩算法，如 LZW、Deflate 和 RLE。
+  - `lzw`: 常用，无损压缩。
+  - `deflate`: 常用，通常比 LZW 效率更高。
+  - `none`: 无压缩，文件最大。
+  - `rle`: 适用于包含大片相同颜色的图像（如黑白图像）。
+  - `ffmpeg -i input.png -compression_algo lzw output.tif`
+- `-pix_fmt`: 支持广泛的像素格式，包括 48-bit RGB、浮点数等，这使得它在专业领域非常有用。
+  - `ffmpeg -i input.png -pix_fmt rgb48 output.tif`
+
+### BMP可选的选项
+BMP 是一种无压缩的位图格式，主要用于 Windows 系统，文件体积通常很大。
+- `pix_fmt`: BMP 支持多种像素格式，但通常没有压缩选项。
+  - `ffmpeg -i input.jpg -pix_fmt bgra bmp_with_alpha.bmp`
+
+BMP 格式的独特之处在于它几乎没有压缩，因此转换速度快，但文件巨大。
+
+
+
+
+# 💨其它补充
 ### 🚀 1. 启用多线程（自动或手动指定）
 FFmpeg 默认会根据系统核心数自动使用多线程，但你也可以手动指定：
 ~~~shell
-
 ffmpeg -i input.mp4 -threads 8 -c:v libx264 -preset fast output.mp4
 ~~~
 参数说明：
@@ -227,7 +338,7 @@ ffmpeg -i your_audio.mp3 -f lavfi -i color=c=black:s=640x480:r=30 -c:v libx264 -
 `output_black_video.mp4`: 指定输出的 MP4 文件名。
 
 
-### ✨4.使用FFmpeg提取指定视频时间区域制作成GIF
+### ✨ 4. 使用FFmpeg提取指定视频时间区域制作成GIF
 
 **基本命令(质量较低)**
 ~~~shell
@@ -272,3 +383,70 @@ ffmpeg -ss [开始时间] -to [结束时间] -i input.mp4 -i palette.png -filter
 - **开始时间` -ss `的位置：**
 - 将 `-ss` 放在 `-i` 之前：这样 FFmpeg 会在读取输入文件之前先定位到指定时间，这通常更快，但可能会导致起始时间略微不准确（它会寻找最近的关键帧）。
 - 将 `-ss` 放在 `-i` 之后：这样 FFmpeg 会从视频开头开始解码，然后在指定时间点开始处理，通常更精确，但对于大型视频文件可能会比较慢。对于 GIF 提取，通常精确度更重要，所以放在 `-i` 之后可能更合适。
+
+### 😤 5. 使用FFmpeg为MP4视频格式文件压入封面和硬字幕（重新编码）
+使用 FFmpeg 为 MP4 视频添加封面和硬字幕是一个复杂但可行的操作，它涉及到多个输入文件和流映射（`map`）的正确使用。
+
+要实现这个目标，你需要执行一个命令，该命令会同时处理以下三个流：
+
+1. **原始视频流**（需要重新编码来烧录字幕）。
+2. **原始音频流**（可以直接复制）。
+3. **封面图片流**（需要作为附加图片流复制）。
+
+**完整命令**
+
+三个文件：
+- `input.mp4`: 原始视频文件
+- `cover.jpg`: 作为封面的图片
+- `subtitle.ass`: 字幕文件
+
+**方法一：使用滤镜同时添加封面和字幕**
+~~~shell
+ffmpeg -i input.mp4 -i cover.jpg -i subtitle.ass -filter_complex "[0:v]ass=subtitle.ass[v]" -map "[v]" -map 0:a -map 1:v -c:v libx264 -crf 18 -c:a copy -c:v:1 mjpeg -disposition:v:1 attached_pic output.mp4
+~~~
+
+- `-filter_complex "[0:v]ass=subtitle.ass[v]"`: This is the best practice for applying the `ass` filter.It explicitly takes the main video stream from the first input([0:v]), applies the `ass` filter (which automatically reads from `subtitle.ass`), and names the resulting filtered video stream `[v]`.This is much clearer and less prone to error
+
+- `-map [v]`: We then map this newly filtered video stream (`[v]`) to the output.This ensures that only the main video with the burned-in subtitles is included.
+- The other `-map` flags remain the same: `-map 0:a` for the audio and `-map 1:v` for the cover image.The `-c:v:1 mjpeg -disposition:v:1 attached_pic` part is now correctly applied to the mapped cover image stream.
+
+**方法二：先压入字幕后压入封面**
+
+STEP1
+~~~shell
+ffmpeg -i input.mp4 -vf "ass=subtitle.ass" -c:v libx264 -crf 18 -c:a copy output.mp4
+~~~
+- `-vf "ass=subtitle.ass"`: 这是关键的视频滤镜。ass 滤镜会读取.ass文件并将其内容绘制到视频帧上。
+
+STEP2
+~~~shell
+ffmpeg -i input.mp4 -i cover.jpg -map 0:v -map 0:a -map 1:v -c:v copy -c:a copy -c:v:1 mjpeg -disposition:v:1 attached_pic output.mp4
+~~~
+- `-c:v:1 mjpeg -disposition:v:1 attached_pic`：这些参数只作用于**第二个视频流（v:1）**，也就是你的封面图片，将其正确处理为内嵌封面。
+
+
+### 😇 6. 使用FFmpeg为MKV视频格式文件压入软字幕（不重新编码）
+~~~shell
+ffmpeg -i input.mkv -i cover.jpg -i subtitle.ass -map 0:v -map 0:a -map 1:v -map 2:s -c copy -disposition:v:1 attached_pic output.mkv
+~~~
+- `-i input.mkv`: 你的第一个输入文件。
+
+- `-i cover.jpg`: 你的第二个输入文件，封面图片。
+
+- `-i subtitle.ass`: 你的第三个输入文件，字幕文件。
+
+- `-map 0:v`: 映射第一个输入文件（`input.mkv`）中的视频流。
+
+- `-map 0:a`: 映射第一个输入文件（`input.mkv`）中的音频流。
+
+- `-map 1:v`: 映射第二个输入文件（`cover.jpg`）中的视频流。
+
+- `-map 2:s`: 映射第三个输入文件（`subtitle.ass`）中的字幕流。
+
+- `-c copy`: 这是最重要的参数，它告诉 FFmpeg **直接复制所有流**，不进行任何重新编码。因为 MKV 容器支持将字幕和封面作为独立的流，所以无需进行耗时的转码。
+
+- `-disposition:v:1 attached_pic`: 这个参数是关键，它告诉 FFmpeg 将第二个输入文件（你的封面图片）标记为“附加图片”，这样播放器就能识别并显示它作为封面。
+
+- `output.mkv`: 最终输出的文件名。
+
+这个命令利用了 MKV 容器的灵活性，实现了**快速、无损地**添加封面和软字幕。
