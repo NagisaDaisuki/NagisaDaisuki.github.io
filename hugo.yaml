@@ -28,13 +28,6 @@ languages:
         - name: 首页
           pageRef: /
           weight: 4 # 控制在页面上展示的前后顺序
-        # 插入子网站链接
-        - name: 要塞都市
-          url: https://nagisadaisuki.github.io/HimariFortressCity/
-          weight: 5
-          params:
-            target: _blank # 在新标签页面打开
-
         - name: 归档
           pageRef: archives/
           weight: 6
@@ -50,6 +43,13 @@ languages:
         - name: 关于
           pageRef: about/
           weight: 21
+
+        # 插入子网站链接
+        - name: 要塞都市
+          url: https://nagisadaisuki.github.io/HimariFortressCity/
+          weight: 22
+          params:
+            target: _blank # 在新标签页面打开
 
 # ~~~~~~~~~~
 # 主题的配置
